@@ -1,14 +1,9 @@
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import fs from "fs";
-// const getImageFilePath = (noradCatId: string) => {
-//   return `/satellite_images/${noradCatId}.jpg`;
-// };
 function getRandomImageUrl() {
-    const imageFiles = fs.readdirSync("./src/images");
-    const randomIndex = Math.floor(Math.random() * imageFiles.length);
-    const randomImageFileName = imageFiles[randomIndex];
-    return `/satellite_images/${randomImageFileName}`;
+    const randomIndex = Math.floor(Math.random() * 17);
+    return `./src/assets/images/${randomIndex}.jpg`;
 }
 const typeDefs = `
   type Satellite {
@@ -34,53 +29,41 @@ const typeDefs = `
     getSatellites(offset: Int, limit: Int, nameOrId: String): SatellitePaginated
   }
 `;
-// : {
-//   total: number;
-//   totalPages: number;
-//   currentPage: number;
-//   satellites: Satellite[];
-// }
 const resolvers = {
     Query: {
         getSatellites: (_, { limit, offset, nameOrId }) => {
-            const data = JSON.parse(fs.readFileSync("./src/data.json", "utf-8"));
-            let filteredSatellites = data;
-            // if (noradCatId) {
-            //   filteredSatellites = filteredSatellites.filter(
-            //     e => e.noradCatId === noradCatId
-            //   );
-            // }
-            // if (name) {
-            //   filteredSatellites = filteredSatellites.filter(e => {
-            //     if (e.name !== null) {
-            //       e.name.toLowerCase().trim().includes(name.toLowerCase().trim());
-            //     }
-            //   });
-            // }
-            if (nameOrId) {
-                filteredSatellites = filteredSatellites.filter(e => {
-                    if (e.name?.toLowerCase().trim().includes(nameOrId) ||
-                        e.noradCatId?.toLowerCase().trim().includes(nameOrId)) {
-                        return e;
-                    }
-                });
+            try {
+                const data = JSON.parse(fs.readFileSync("./src/data.json", "utf-8"));
+                let filteredSatellites = data;
+                if (nameOrId) {
+                    filteredSatellites = filteredSatellites.filter(e => {
+                        if (e.name?.toLowerCase().trim().includes(nameOrId) ||
+                            e.noradCatId === nameOrId) {
+                            return e;
+                        }
+                    });
+                }
+                const total = filteredSatellites.length;
+                const totalPages = Math.ceil(total / limit);
+                const startIndex = offset * limit;
+                const endIndex = offset * limit + limit;
+                const satellites = filteredSatellites
+                    .slice(startIndex, endIndex)
+                    .map(satellite => ({
+                    ...satellite,
+                    imageUrl: getRandomImageUrl(),
+                }));
+                return {
+                    total,
+                    totalPages,
+                    currentPage: offset + 1,
+                    satellites,
+                };
             }
-            const total = data.length;
-            const totalPages = Math.ceil(total / limit);
-            const startIndex = offset;
-            const endIndex = offset + limit;
-            const satellites = filteredSatellites
-                .slice(startIndex, endIndex)
-                .map(satellite => ({
-                ...satellite,
-                imageUrl: getRandomImageUrl(),
-            }));
-            return {
-                total,
-                totalPages,
-                currentPage: Math.floor(offset / limit) + 1,
-                satellites,
-            };
+            catch (error) {
+                console.log(error);
+                return error;
+            }
         },
     },
 };

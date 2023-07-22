@@ -28,10 +28,8 @@ interface GetSatelliteInterface {
 }
 
 function getRandomImageUrl() {
-  const imageFiles = fs.readdirSync("./src/images");
-  const randomIndex = Math.floor(Math.random() * imageFiles.length);
-  const randomImageFileName = imageFiles[randomIndex];
-  return `/satellite_images/${randomImageFileName}`;
+  const randomIndex = Math.floor(Math.random() * 17);
+  return `./src/assets/images/${randomIndex}.jpg`;
 }
 
 const typeDefs = `
@@ -64,43 +62,48 @@ const resolvers = {
     getSatellites: (
       _: unknown,
       { limit, offset, nameOrId }: GetSatelliteInterface
-    ): SatellitePaginated => {
-      const data: Satellite[] = JSON.parse(
-        fs.readFileSync("./src/data.json", "utf-8")
-      );
+    ): SatellitePaginated | Error => {
+      try {
+        const data: Satellite[] = JSON.parse(
+          fs.readFileSync("./src/data.json", "utf-8")
+        );
 
-      let filteredSatellites = data;
+        let filteredSatellites = data;
 
-      if (nameOrId) {
-        filteredSatellites = filteredSatellites.filter(e => {
-          if (
-            e.name?.toLowerCase().trim().includes(nameOrId) ||
-            e.noradCatId?.toLowerCase().trim().includes(nameOrId)
-          ) {
-            return e;
-          }
-        });
+        if (nameOrId) {
+          filteredSatellites = filteredSatellites.filter(e => {
+            if (
+              e.name?.toLowerCase().trim().includes(nameOrId) ||
+              e.noradCatId === nameOrId
+            ) {
+              return e;
+            }
+          });
+        }
+
+        const total = filteredSatellites.length;
+        const totalPages = Math.ceil(total / limit);
+
+        const startIndex = offset * limit;
+        const endIndex = offset * limit + limit;
+
+        const satellites = filteredSatellites
+          .slice(startIndex, endIndex)
+          .map(satellite => ({
+            ...satellite,
+            imageUrl: getRandomImageUrl(),
+          }));
+
+        return {
+          total,
+          totalPages,
+          currentPage: offset + 1,
+          satellites,
+        };
+      } catch (error) {
+        console.log(error);
+        return error;
       }
-
-      const total = data.length;
-      const totalPages = Math.ceil(total / limit);
-
-      const startIndex = offset;
-      const endIndex = offset + limit;
-
-      const satellites = filteredSatellites
-        .slice(startIndex, endIndex)
-        .map(satellite => ({
-          ...satellite,
-          imageUrl: getRandomImageUrl(),
-        }));
-
-      return {
-        total,
-        totalPages,
-        currentPage: Math.floor(offset / limit) + 1,
-        satellites,
-      };
     },
   },
 };
