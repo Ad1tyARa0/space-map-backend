@@ -25,6 +25,9 @@ interface GetSatelliteInterface {
   limit: number;
   offset: number;
   nameOrId?: string;
+  countryCode?: string;
+  orbitCode?: string;
+  objectType?: string;
 }
 
 function getRandomImageUrl() {
@@ -53,7 +56,7 @@ const typeDefs = `
   }
 
   type Query {
-    getSatellites(offset: Int, limit: Int, nameOrId: String): SatellitePaginated
+    getSatellites(offset: Int!, limit: Int!, nameOrId: String, countryCode: String, orbitCode: String, objectType: String): SatellitePaginated
   }
 `;
 
@@ -61,7 +64,14 @@ const resolvers = {
   Query: {
     getSatellites: (
       _: unknown,
-      { limit, offset, nameOrId }: GetSatelliteInterface
+      {
+        limit,
+        offset,
+        nameOrId,
+        countryCode,
+        orbitCode,
+        objectType,
+      }: GetSatelliteInterface
     ): SatellitePaginated | Error => {
       try {
         const data: Satellite[] = JSON.parse(
@@ -73,8 +83,50 @@ const resolvers = {
         if (nameOrId) {
           filteredSatellites = filteredSatellites.filter(e => {
             if (
-              e.name?.toLowerCase().trim().includes(nameOrId) ||
+              e.name
+                ?.toLowerCase()
+                .trim()
+                .includes(nameOrId.toLowerCase().trim()) ||
               e.noradCatId === nameOrId
+            ) {
+              return e;
+            }
+          });
+        }
+
+        if (countryCode) {
+          filteredSatellites = filteredSatellites.filter(e => {
+            if (
+              e.countryCode
+                ?.toLowerCase()
+                .trim()
+                .includes(countryCode.toLowerCase().trim())
+            ) {
+              return e;
+            }
+          });
+        }
+
+        if (orbitCode) {
+          filteredSatellites = filteredSatellites.filter(e => {
+            if (
+              e.orbitCode
+                ?.toLowerCase()
+                .trim()
+                .includes(orbitCode.toLowerCase().trim())
+            ) {
+              return e;
+            }
+          });
+        }
+
+        if (objectType) {
+          filteredSatellites = filteredSatellites.filter(e => {
+            if (
+              e.objectType
+                ?.toLowerCase()
+                .trim()
+                .includes(objectType.toLowerCase().trim())
             ) {
               return e;
             }
